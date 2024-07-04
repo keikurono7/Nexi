@@ -1,10 +1,12 @@
-import 'dart:io';
 import 'dart:typed_data';
-import 'package:path_provider/path_provider.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:tflite/tflite.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+
 
 class Depth extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -21,75 +23,58 @@ class _DepthState extends State<Depth> {
   bool isRearCamera = true;
   String responseText = "no caption yet";
 
-  @override
-  void initState() {
-    super.initState();
-    startCamera(0);
-    loadModel();
-  }
-
-  @override
-  void dispose() {
-    cameraController.dispose();
-    Tflite.close();
-    super.dispose();
-  }
-
-  Future<void> loadModel() async {
-    String? res = await Tflite.loadModel(
-      model: "assets/model.tflite",
-      labels: "assets/labels.txt",
-    );
-    print(res);
-  }
+  final model = GenerativeModel(
+    model: 'gemini-1.5-flash-latest',
+    apiKey: 'AIzaSyBlbaYo1uoMCYz2FGoFfvilZ9oPmy-Mcw8',
+  );
 
   Future<void> takePicture() async {
-    if (cameraController.value.isTakingPicture || !cameraController.value.isInitialized) {
-      return;
-    }
-
-    try {
-      XFile image = await cameraController.takePicture();
-      Uint8List imageData = await image.readAsBytes();
-      setState(() {
-        this.imageData = imageData;
-      });
-
-      // Save image to temporary file
-      String imagePath = await saveImage(imageData);
-
-      // Run TFLite model inference
-      runModelOnImage(imagePath);
-
-    } catch (e, stackTrace) {
-      print("Error taking picture: $e");
-      print(stackTrace);
-    }
+  if (cameraController.value.isTakingPicture || !cameraController.value.isInitialized) {
+    return;
   }
 
-  Future<String> saveImage(Uint8List imageData) async {
-    final Directory extDir = await getTemporaryDirectory();
-    final String dirPath = '${extDir.path}/Pictures';
-    await Directory(dirPath).create(recursive: true);
-    final String filePath = '$dirPath/${DateTime.now().millisecondsSinceEpoch}.jpg';
-    File(filePath).writeAsBytesSync(imageData);
-    return filePath;
-  }
-
-  Future<void> runModelOnImage(String imagePath) async {
-    var output = await Tflite.runModelOnImage(
-      path: imagePath,
-      imageMean: 0.0,
-      imageStd: 255.0,
-      numResults: 5,
-      threshold: 0.5,
-    );
-
+  try {
+    XFile image = await cameraController.takePicture();
+    Uint8List imageData = await image.readAsBytes();
     setState(() {
-      responseText = output?.map((e) => e['label']).join(', ') ?? "No response";
+      this.imageData = imageData;
+    });
+
+    // Prepare your API authentication
+    final authn = 'Basic YWNjXzhmMGVmNjk2MGNkOTA2ODo1NzFiYmNhOTdlNDIyMmRiMDIxNTAyNjdhZjdjMDY5Yw==';
+    
+    // Define your API endpoint
+    final url = Uri.parse('https://api.imagga.com/v2/tags');
+    
+    // Prepare the request headers and body
+    final headers = {
+      'Authorization': authn,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+    final body = {
+      'image_base64': base64Encode(imageData),
+    };
+
+    // Send the POST request to Imagga API
+    final response = await http.post(url, headers: headers, body: body);
+
+    // Handle response (print for now, you can update based on your needs)
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
+
+    final content = [Content.text("Only generate a single caption for the given data and don't use adjectives and instead of businessperson use person and instead of saying "+response.body)];
+    final response2 = await model.generateContent(content);
+    setState(() {
+      responseText = response2.text ?? "No response";
       print(responseText);
     });
+
+  } catch (e, stackTrace) {
+    print("Error taking picture: $e");
+    print(stackTrace);
   }
+}
+
 
   void startCamera(int camera) {
     cameraController = CameraController(
@@ -98,6 +83,18 @@ class _DepthState extends State<Depth> {
       enableAudio: false,
     );
     cameraValue = cameraController.initialize();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    startCamera(0);
+  }
+
+  @override
+  void dispose() {
+    cameraController.dispose();
+    super.dispose();
   }
 
   @override
@@ -136,6 +133,7 @@ class _DepthState extends State<Depth> {
           children: [
             Container(
               padding: EdgeInsets.all(width*0.05),
+              
               height: height*0.095,
               width: width*0.9,
               decoration: BoxDecoration(
