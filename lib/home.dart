@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:chatbot1/chat.dart';
+import 'package:chatbot1/chat2.dart';
 import 'package:chatbot1/depth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int currentTab = 1;
+  int currentTab = 0;
   late List<Widget> screens;
   late Widget currentScreen;
   final PageStorageBucket bucket = PageStorageBucket();
@@ -24,6 +25,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     screens = [
       Chatbot(),
+      Chatbot2(),
       Depth(cameras: widget.cameras),
     ];
     currentScreen = screens[currentTab];
@@ -75,6 +77,35 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 MaterialButton(
                   shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(topRight: Radius.circular(20)),
+                  ),
+                  padding: EdgeInsets.only(left: 20, right: 20, top: 0),
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  minWidth: width*0.3,
+                  onPressed: () {
+                    setState(() {
+                      currentScreen = screens[1];
+                      currentTab = 1;
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      Icon(
+                        CupertinoIcons.circle,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                      Text(
+                        "Nexi",
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                MaterialButton(
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.only(topLeft: Radius.circular(20)),
                   ),
                   padding: EdgeInsets.only(left: 20, right: 20),
@@ -82,8 +113,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   minWidth: width*0.3,
                   onPressed: () {
                     setState(() {
-                      currentScreen = screens[1];
-                      currentTab = 1;
+                      currentScreen = screens[2];
+                      currentTab = 2;
                     });
                   },
                   child: Column(
