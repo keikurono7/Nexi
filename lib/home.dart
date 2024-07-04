@@ -14,7 +14,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int currentTab = 0;
+  int currentTab = 1;
   late List<Widget> screens;
   late Widget currentScreen;
   final PageStorageBucket bucket = PageStorageBucket();

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -19,6 +20,12 @@ class _DepthState extends State<Depth> {
   late Future<void> cameraValue;
   Uint8List? imageData;
   bool isRearCamera = true;
+  String responseText = "nothing";
+
+  final model = GenerativeModel(
+    model: 'gemini-1.5-flash-latest',
+    apiKey: 'AIzaSyBlbaYo1uoMCYz2FGoFfvilZ9oPmy-Mcw8',
+  );
 
   Future<void> takePicture() async {
   if (cameraController.value.isTakingPicture || !cameraController.value.isInitialized) {
@@ -33,9 +40,9 @@ class _DepthState extends State<Depth> {
     });
 
     // Prepare your API authentication
-    final uname = '<replace-with-your-api-key>';
-    final pword = '<replace-with-your-api-secret>';
-    final authn = 'Basic ${base64Encode(utf8.encode('$uname:$pword'))}';
+    final uname = 'acc_8f0ef6960cd9068';
+    final pword = '571bbca97e4222db02150267af7c069c';
+    final authn = 'Basic YWNjXzhmMGVmNjk2MGNkOTA2ODo1NzFiYmNhOTdlNDIyMmRiMDIxNTAyNjdhZjdjMDY5Yw==';
     
     // Define your API endpoint
     final url = Uri.parse('https://api.imagga.com/v2/tags');
@@ -55,6 +62,13 @@ class _DepthState extends State<Depth> {
     // Handle response (print for now, you can update based on your needs)
     print('Response status: ${response.statusCode}');
     print('Response body: ${response.body}');
+
+    final content = [Content.text("Only generate a single caption for the given data "+response.body)];
+    final response2 = await model.generateContent(content);
+    setState(() {
+      responseText = response2.text ?? "No response";
+      print(responseText);
+    });
 
   } catch (e, stackTrace) {
     print("Error taking picture: $e");
@@ -166,6 +180,13 @@ class _DepthState extends State<Depth> {
               ],
             ),
           ),
+          Container(
+            padding: EdgeInsets.all(width*0.05),
+            color: Theme.of(context).colorScheme.secondaryContainer,
+            height: responseText == "nothing"? 0 : 100,
+            width: responseText == "nothing"? 0 : width,
+            child: SingleChildScrollView(child: Center(child: Text(responseText))),
+          )
         ],
       ),
     );
