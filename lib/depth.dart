@@ -63,7 +63,7 @@ class _DepthState extends State<Depth> {
     print('Response status: ${response.statusCode}');
     print('Response body: ${response.body}');
 
-    final content = [Content.text("Only generate a single caption for the given data "+response.body)];
+    final content = [Content.text("Only generate a single caption for the given data and don't use adjectives and instead of businessperson use person and instead of saying "+response.body)];
     final response2 = await model.generateContent(content);
     setState(() {
       responseText = response2.text ?? "No response";
