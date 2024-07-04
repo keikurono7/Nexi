@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "449802593207",
+    "project_id": "insightai-bbb17",
+    "storage_bucket": "insightai-bbb17.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:449802593207:android:ac076c9010dedc8bb1be32",
+        "android_client_info": {
+          "package_name": "com.nexi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAO6Rz4z9SoUNIVuVaqrHLK7NHxZbod6Q4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
