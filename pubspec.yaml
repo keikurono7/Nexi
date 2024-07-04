@@ -20,6 +20,9 @@ dependencies:
   media_scanner: ^2.1.0
   firebase_core: ^3.1.1
   firebase_storage: ^12.1.0
+  speech_to_text: ^6.6.2
+  highlight_text: ^1.7.0
+  avatar_glow: ^3.0.1 
 
 dev_dependencies:
   flutter_test:
@@ -31,7 +34,10 @@ dev_dependencies:
 flutter:
 
   uses-material-design: true
-  
+
+  assets:
+    - asset/
+
   fonts:
     - family: Museo
       fonts:

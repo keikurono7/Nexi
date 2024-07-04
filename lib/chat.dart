@@ -10,15 +10,22 @@ class Chatbot extends StatefulWidget {
 
 class ChatbotState extends State<Chatbot> {
   final TextEditingController _controller = TextEditingController();
+  List<String> past = ["hii", "heyy there"];
+  String responseText = "Heyy there, How can I help you today?";
+
   final model = GenerativeModel(
     model: 'gemini-1.5-flash-latest',
     apiKey: 'AIzaSyBlbaYo1uoMCYz2FGoFfvilZ9oPmy-Mcw8',
   );
 
-  String responseText = "Heyy there, How can I help you today?";
-
   Future<void> generateContent(String prompt) async {
-    final content = [Content.text(prompt)];
+    past.add(prompt);
+    String conversationContext = "";
+    for (int i = 0; i < past.length - 1; i += 2) {
+      conversationContext += "[ person : ${past[i]} ] [ gemini response : ${past[i+1]} ] ";
+    }
+    conversationContext += "Continue the conversation as a therapist would and only answer the question. The person asks $prompt";
+    final content = [Content.text(conversationContext)];
     final response = await model.generateContent(content);
     setState(() {
       responseText = response.text ?? "No response";
@@ -28,14 +35,11 @@ class ChatbotState extends State<Chatbot> {
   Widget buildResponse(String text) {
     List<TextSpan> textSpans = [];
 
-    // Split text based on * to determine bold sections
     List<String> parts = text.split('*');
     for (int i = 0; i < parts.length; i++) {
       if (i % 2 == 0) {
-        // Normal text
         textSpans.add(TextSpan(text: parts[i], style: TextStyle(color: Colors.black)));
       } else {
-        // Bold text
         textSpans.add(TextSpan(text: parts[i], style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)));
       }
     }
@@ -49,38 +53,16 @@ class ChatbotState extends State<Chatbot> {
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-      appBar: AppBar(
-        centerTitle: true,
-        elevation: 1,
-        leading: Icon(Icons.android, color: Colors.white,),
-        title: Text(
-          "NEXI",
-          style: TextStyle(color: Colors.white, fontFamily: 'Grandstander'),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-      ),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          FloatingActionButton(
-              backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-              child: Icon(Icons.send, color: Theme.of(context).colorScheme.onSecondary),
-              onPressed: () {
-                generateContent(_controller.text);
-                _controller.clear();
-              }),
-          FloatingActionButton(
-              backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-              child: Icon(Icons.headphones, color: Theme.of(context).colorScheme.onSecondary),
-              onPressed: () {
-                generateContent(_controller.text);
-                _controller.clear();
-              }),
-        ],
-      ),
+      floatingActionButton: FloatingActionButton(
+          backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+          child: Icon(Icons.headphones, color: Theme.of(context).colorScheme.onSecondary),
+          onPressed: () {
+            generateContent(_controller.text);
+            _controller.clear();
+          }),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
