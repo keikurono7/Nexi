@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+
 class Depth extends StatefulWidget {
   final List<CameraDescription> cameras;
-  const Depth({Key? key, required this.cameras}) : super(key: key);
+  const Depth({super.key, required this.cameras});
 
   @override
   State<Depth> createState() => _DepthState();
@@ -17,6 +18,7 @@ class _DepthState extends State<Depth> {
   late CameraController cameraController;
   late Future<void> cameraValue;
   Uint8List? imageData;
+  bool isRearCamera = true;
   String responseText = "No caption yet";
 
   Future<void> takePicture() async {
@@ -31,21 +33,25 @@ class _DepthState extends State<Depth> {
         this.imageData = imageData;
       });
 
-      final url = Uri.parse('http://10.0.2.2:5000/predict');
+      // Send the image to your Flask server
+      final url = Uri.parse('http://127.0.0.1:5000/predict');
       final request = http.MultipartRequest('POST', url)
         ..files.add(http.MultipartFile.fromBytes('image', imageData, filename: 'image.jpg'));
 
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
-      final responseData = jsonDecode(responseBody);
 
-      if (response.statusCode == 200 && responseData != null) {
+      // Parse the JSON response
+      List<dynamic> responseData = jsonDecode(responseBody);
+      if (responseData.isNotEmpty) {
+        // Access the first element assuming it contains the generated text
+        Map<String, dynamic> firstResult = responseData[0];
         setState(() {
-          responseText = responseData['generated_text'] ?? "No caption generated";
+          responseText = firstResult['generated_text'] ?? "No caption generated";
         });
       } else {
         setState(() {
-          responseText = "Failed to get caption";
+          responseText = "Empty response";
         });
       }
     } catch (e, stackTrace) {
@@ -80,8 +86,8 @@ class _DepthState extends State<Depth> {
 
   @override
   Widget build(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
-    double height = MediaQuery.of(context).size.height;
+    double width = MediaQuery.sizeOf(context).width;
+    double height = MediaQuery.sizeOf(context).height;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
       floatingActionButton: Row(
@@ -100,8 +106,8 @@ class _DepthState extends State<Depth> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: Container(
-        width: double.infinity,
-        height: double.infinity,
+        width: double.maxFinite,
+        height: double.maxFinite,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
