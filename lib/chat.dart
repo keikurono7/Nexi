@@ -1,6 +1,9 @@
+import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flutter_tts/flutter_tts.dart';
 
 class Chatbot extends StatefulWidget {
   const Chatbot({super.key});
@@ -10,43 +13,114 @@ class Chatbot extends StatefulWidget {
 }
 
 class ChatbotState extends State<Chatbot> {
-  final TextEditingController _controller = TextEditingController();
-  List<String> past = ["hii", "heyy there"];
-  String responseText = "Heyy there, How can I help you today?";
+  late stt.SpeechToText _speech;
+  late FlutterTts _flutterTts;
+  bool _isListening = false;
+  String _text = "";
+  String responseText = "Hey there, How can I help you today?";
 
   final model = GenerativeModel(
     model: 'gemini-1.5-flash-latest',
     apiKey: 'AIzaSyBlbaYo1uoMCYz2FGoFfvilZ9oPmy-Mcw8',
   );
 
+  @override
+  void initState() {
+    super.initState();
+    _speech = stt.SpeechToText();
+    _flutterTts = FlutterTts();
+  }
+
   Future<void> generateContent(String prompt) async {
-    past.add(prompt);
-    String conversationContext = "";
-    for (int i = 0; i < past.length - 1; i += 2) {
-      conversationContext += "[ person : ${past[i]} ] [ gemini response : ${past[i+1]} ] ";
+    try {
+      String conversationContext = "Continue the conversation as a therapist would and only answer the question. The person asks $prompt";
+      final content = [Content.text(conversationContext)];
+      final response = await model.generateContent(content);
+      setState(() {
+        responseText = response.text ?? "No response";
+        _speak(responseText);
+      });
+    } catch (e) {
+      print('Error generating content: $e');
+      setState(() {
+        responseText = "Error generating content.";
+      });
     }
-    conversationContext += "Continue the conversation as a therapist would and only answer the question. The person asks $prompt";
-    final content = [Content.text(conversationContext)];
-    final response = await model.generateContent(content);
-    setState(() {
-      responseText = response.text ?? "No response";
-    });
+  }
+
+  void _startListening() async {
+    try {
+      bool available = await _speech.initialize(
+        onStatus: (val) => print('onStatus: $val'),
+        onError: (val) => print('onError: $val'),
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) => setState(() {
+            _text = val.recognizedWords;
+            if (val.hasConfidenceRating && val.confidence > 0) {
+              print('Recognized Words: $_text');  // Debugging
+              generateContent(_text);
+              _stopListening();
+            }
+          }),
+          listenFor: Duration(seconds: 10),
+          pauseFor: Duration(seconds: 5),
+          localeId: 'en_US',
+          onSoundLevelChange: (val) => print('Sound Level: $val'),  // Debugging
+          cancelOnError: true,
+          listenMode: stt.ListenMode.confirmation,
+        );
+      } else {
+        print('The user has denied the use of speech recognition.');
+      }
+    } catch (e) {
+      print('Error starting listening: $e');
+      setState(() {
+        responseText = "Error starting listening.";
+      });
+    }
+  }
+
+  void _stopListening() {
+    try {
+      setState(() => _isListening = false);
+      _speech.stop();
+    } catch (e) {
+      print('Error stopping listening: $e');
+    }
+  }
+
+  Future<void> _speak(String text) async {
+    try {
+      await _flutterTts.speak(text);
+    } catch (e) {
+      print('Error speaking: $e');
+      setState(() {
+        responseText = "Error speaking.";
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
       floatingActionButton: FloatingActionButton(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          child: Icon(CupertinoIcons.mic, color: Theme.of(context).colorScheme.onSecondary),
-          onPressed: () {
-            generateContent(_controller.text);
-            _controller.clear();
-          }),
+        backgroundColor: Color(0xff98bdde),
+        shape: const CircleBorder(),
+        child: Icon(_isListening ? CupertinoIcons.mic_off : CupertinoIcons.mic, color: Theme.of(context).colorScheme.onSecondary),
+        onPressed: () {
+          if (_isListening) {
+            _stopListening();
+          } else {
+            _startListening();
+          }
+        },
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: Container(
         width: double.maxFinite,
@@ -59,22 +133,18 @@ class ChatbotState extends State<Chatbot> {
           ),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image(
-              image: AssetImage(
-                "asset/logo.png"
-              )
+            AvatarGlow(
+              child: Image(
+                image: AssetImage("asset/logo.png"),
+              ),
             ),
             Padding(
-              padding: const EdgeInsets.only(bottom: 80, left: 20, right: 20),
-              child: TextField(
-                textInputAction: TextInputAction.go,
-                controller: _controller,
-                decoration: InputDecoration(
-                    enabledBorder: OutlineInputBorder(),
-                    labelText: "Enter your text",
-                    hintText: ""),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                responseText,
+                style: TextStyle(fontSize: 16, color: Colors.white),
               ),
             ),
           ],

@@ -107,7 +107,7 @@ class _DepthState extends State<Depth> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           FloatingActionButton(
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: Color(0xff80e0e0),
             shape: const CircleBorder(),
             onPressed: takePicture,
             child: const Icon(
