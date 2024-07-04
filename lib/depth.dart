@@ -1,13 +1,14 @@
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:path/path.dart' as path;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+
 
 class Depth extends StatefulWidget {
   final List<CameraDescription> cameras;
-  const Depth({Key? key, required this.cameras}) : super(key: key);
+  const Depth({super.key, required this.cameras});
 
   @override
   State<Depth> createState() => _DepthState();
@@ -17,45 +18,50 @@ class _DepthState extends State<Depth> {
   late CameraController cameraController;
   late Future<void> cameraValue;
   Uint8List? imageData;
+  bool isRearCamera = true;
 
   Future<void> takePicture() async {
-    if (cameraController.value.isTakingPicture || !cameraController.value.isInitialized) {
-      return;
-    }
-
-    try {
-      XFile image = await cameraController.takePicture();
-      imageData = await image.readAsBytes();
-      setState(() {
-        // Update UI or any state changes if needed
-      });
-
-      await uploadImageToFirebase(imageData!, path.basename(image.path));
-
-    } catch (e, stackTrace) {
-      print("Error taking picture: $e");
-      print(stackTrace);
-    }
+  if (cameraController.value.isTakingPicture || !cameraController.value.isInitialized) {
+    return;
   }
 
-  Future<void> uploadImageToFirebase(Uint8List imageBytes, String fileName) async {
-    try {
-      FirebaseStorage storage = FirebaseStorage.instance;
-      Reference storageRef = storage.ref().child('images/$fileName');
+  try {
+    XFile image = await cameraController.takePicture();
+    Uint8List imageData = await image.readAsBytes();
+    setState(() {
+      this.imageData = imageData;
+    });
 
-      UploadTask uploadTask = storageRef.putData(imageBytes);
-      TaskSnapshot taskSnapshot = await uploadTask;
+    // Prepare your API authentication
+    final uname = '<replace-with-your-api-key>';
+    final pword = '<replace-with-your-api-secret>';
+    final authn = 'Basic ${base64Encode(utf8.encode('$uname:$pword'))}';
+    
+    // Define your API endpoint
+    final url = Uri.parse('https://api.imagga.com/v2/tags');
+    
+    // Prepare the request headers and body
+    final headers = {
+      'Authorization': authn,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+    final body = {
+      'image_base64': base64Encode(imageData),
+    };
 
-      String downloadUrl = await taskSnapshot.ref.getDownloadURL();
-      print('Download URL: $downloadUrl');
+    // Send the POST request to Imagga API
+    final response = await http.post(url, headers: headers, body: body);
 
-      // Now you can use the downloadUrl as needed
-      // e.g., save it to Firestore, display it in your app, etc.
+    // Handle response (print for now, you can update based on your needs)
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
 
-    } catch (e) {
-      print('Error uploading image to Firebase Storage: $e');
-    }
+  } catch (e, stackTrace) {
+    print("Error taking picture: $e");
+    print(stackTrace);
   }
+}
+
 
   void startCamera(int camera) {
     cameraController = CameraController(
@@ -69,9 +75,7 @@ class _DepthState extends State<Depth> {
   @override
   void initState() {
     super.initState();
-    Firebase.initializeApp().then((_) {
-      startCamera(0); // Initialize camera after Firebase is initialized
-    });
+    startCamera(0);
   }
 
   @override
@@ -82,9 +86,8 @@ class _DepthState extends State<Depth> {
 
   @override
   Widget build(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
-    double height = MediaQuery.of(context).size.height;
-
+    double width = MediaQuery.sizeOf(context).width;
+    double height = MediaQuery.sizeOf(context).height;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
       floatingActionButton: Row(
@@ -95,7 +98,7 @@ class _DepthState extends State<Depth> {
             shape: const CircleBorder(),
             onPressed: takePicture,
             child: const Icon(
-              Icons.camera_alt,
+              Icons.question_mark,
               size: 40,
               color: Colors.black87,
             ),
@@ -112,12 +115,12 @@ class _DepthState extends State<Depth> {
                 return Center(
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                     width: width * 0.9,
                     height: height * 0.87,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                       child: CameraPreview(cameraController),
                     ),
                   ),
