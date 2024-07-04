@@ -24,6 +24,7 @@ dependencies:
   highlight_text: ^1.7.0
   avatar_glow: ^3.0.1 
   flutter_tts: ^4.0.2
+  tflite: ^1.1.2
 
 dev_dependencies:
   flutter_test:

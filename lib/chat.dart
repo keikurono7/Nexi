@@ -32,75 +32,50 @@ class ChatbotState extends State<Chatbot> {
   }
 
   Future<void> generateContent(String prompt) async {
-    try {
-      String conversationContext = "Continue the conversation as a therapist would and only answer the question. The person asks $prompt";
-      final content = [Content.text(conversationContext)];
-      final response = await model.generateContent(content);
-      setState(() {
-        responseText = response.text ?? "No response";
-        _speak(responseText);
-      });
-    } catch (e) {
-      print('Error generating content: $e');
-      setState(() {
-        responseText = "Error generating content.";
-      });
-    }
+    String conversationContext = "Continue the conversation as a therapist would and only answer the question. The person asks $prompt";
+    final content = [Content.text(conversationContext)];
+    final response = await model.generateContent(content);
+    setState(() {
+      responseText = response.text ?? "No response";
+      _speak(responseText);
+    });
   }
 
   void _startListening() async {
-    try {
-      bool available = await _speech.initialize(
-        onStatus: (val) => print('onStatus: $val'),
-        onError: (val) => print('onError: $val'),
+    bool available = await _speech.initialize(
+      onStatus: (val) => print('onStatus: $val'),
+      onError: (val) => print('onError: $val'),
+    );
+    if (available) {
+      setState(() => _isListening = true);
+      _speech.listen(
+        onResult: (val) => setState(() {
+          _text = val.recognizedWords;
+          if (val.hasConfidenceRating && val.confidence > 0) {
+            print('Recognized Words: $_text');  // Add this line for debugging
+            generateContent(_text);
+            _stopListening();
+          }
+        }),
+        listenFor: Duration(seconds: 10),
+        pauseFor: Duration(seconds: 5),
+        localeId: 'en_US',
+        onSoundLevelChange: (val) => print('Sound Level: $val'),  // Add this line for debugging
+        cancelOnError: true,
+        listenMode: stt.ListenMode.confirmation,
       );
-      if (available) {
-        setState(() => _isListening = true);
-        _speech.listen(
-          onResult: (val) => setState(() {
-            _text = val.recognizedWords;
-            if (val.hasConfidenceRating && val.confidence > 0) {
-              print('Recognized Words: $_text');  // Debugging
-              generateContent(_text);
-              _stopListening();
-            }
-          }),
-          listenFor: Duration(seconds: 10),
-          pauseFor: Duration(seconds: 5),
-          localeId: 'en_US',
-          onSoundLevelChange: (val) => print('Sound Level: $val'),  // Debugging
-          cancelOnError: true,
-          listenMode: stt.ListenMode.confirmation,
-        );
-      } else {
-        print('The user has denied the use of speech recognition.');
-      }
-    } catch (e) {
-      print('Error starting listening: $e');
-      setState(() {
-        responseText = "Error starting listening.";
-      });
+    } else {
+      print('The user has denied the use of speech recognition.');
     }
   }
 
   void _stopListening() {
-    try {
-      setState(() => _isListening = false);
-      _speech.stop();
-    } catch (e) {
-      print('Error stopping listening: $e');
-    }
+    setState(() => _isListening = false);
+    _speech.stop();
   }
 
   Future<void> _speak(String text) async {
-    try {
-      await _flutterTts.speak(text);
-    } catch (e) {
-      print('Error speaking: $e');
-      setState(() {
-        responseText = "Error speaking.";
-      });
-    }
+    await _flutterTts.speak(text);
   }
 
   @override
@@ -112,7 +87,7 @@ class ChatbotState extends State<Chatbot> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Color(0xff98bdde),
         shape: const CircleBorder(),
-        child: Icon(_isListening ? CupertinoIcons.mic_off : CupertinoIcons.mic, color: Theme.of(context).colorScheme.onSecondary),
+        child: Icon(_isListening ? CupertinoIcons.mic_off : CupertinoIcons.mic, color: Colors.white),
         onPressed: () {
           if (_isListening) {
             _stopListening();
