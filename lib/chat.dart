@@ -55,7 +55,7 @@ class ChatbotState extends State<Chatbot> {
   }
 
   speak(String text) async{
-    await flutterTts.setLanguage("pt-br");
+    await flutterTts.setLanguage("en-US-Wavenet-B");
     await flutterTts.setPitch(0.5);
     await flutterTts.speak(text);
   }
