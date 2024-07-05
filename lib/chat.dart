@@ -55,8 +55,8 @@ class ChatbotState extends State<Chatbot> {
   }
 
   speak(String text) async{
-    await flutterTts.setLanguage("en-US-Wavenet-B");
-    await flutterTts.setPitch(0.5);
+    await flutterTts.setLanguage("en-GB");
+    await flutterTts.setPitch(50.0);
     await flutterTts.speak(text);
   }
 
@@ -189,6 +189,7 @@ class ChatbotState extends State<Chatbot> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             AvatarGlow(
+              animate: !_isListening,
               child: SizedBox(
                 height: height * 0.25,
                 child: Image(
