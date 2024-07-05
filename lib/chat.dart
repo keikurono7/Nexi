@@ -3,8 +3,30 @@ import 'dart:convert';
 import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:highlight_text/highlight_text.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Voice',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.red,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      home: Chatbot(),
+    );
+  }
+}
 
 class Chatbot extends StatefulWidget {
   const Chatbot({super.key});
@@ -14,10 +36,29 @@ class Chatbot extends StatefulWidget {
 }
 
 class ChatbotState extends State<Chatbot> {
-  final TextEditingController _controller = TextEditingController();
+  final FlutterTts flutterTts = FlutterTts();
+  final TextEditingController textEditingController = TextEditingController();
+
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+  String _text = 'Press the button and start speaking';
+  double _confidence = 1.0;
+
   List<String> past = ["hii", "heyy there"];
   String responseText = "Heyy there, How can I help you today?";
-  final String apiKey = 'AIzaSyBlbaYo1uoMCYz2FGoFfvilZ9oPmy-Mcw8'; 
+  final String apiKey = 'AIzaSyBlbaYo1uoMCYz2FGoFfvilZ9oPmy-Mcw8';
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = stt.SpeechToText();
+  }
+
+  speak(String text) async{
+    await flutterTts.setLanguage("pt-br");
+    await flutterTts.setPitch(0.5);
+    await flutterTts.speak(text);
+  }
 
   Future<void> generateContent(String prompt) async {
     past.add(prompt);
@@ -62,6 +103,7 @@ class ChatbotState extends State<Chatbot> {
 
         setState(() {
           responseText = generatedText ?? "No response";
+          speak(responseText);
         });
       } else {
         throw Exception('Failed to fetch data');
@@ -71,6 +113,30 @@ class ChatbotState extends State<Chatbot> {
       setState(() {
         responseText = "Error occurred. Please try again.";
       });
+    }
+  }
+
+  void _listen() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (val) => print('onStatus: $val'),
+        onError: (val) => print('onError: $val'),
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) => setState(() {
+            _text = val.recognizedWords;
+            if (val.hasConfidenceRating && val.confidence > 0) {
+              _confidence = val.confidence;
+            }
+          }),
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+      generateContent(_text);
     }
   }
 
@@ -97,13 +163,16 @@ class ChatbotState extends State<Chatbot> {
     double width = MediaQuery.of(context).size.width;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-        child: Icon(CupertinoIcons.pen, color: Theme.of(context).colorScheme.onSecondary),
-        onPressed: () {
-          generateContent(_controller.text);
-          _controller.clear();
-        },
+      floatingActionButton: AvatarGlow(
+        animate: _isListening,
+        glowColor: Theme.of(context).primaryColor,
+        duration: const Duration(milliseconds: 2000),
+        repeat: true,
+        child: FloatingActionButton(
+          backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+          child: Icon(_isListening ? Icons.mic : Icons.mic_none, color: Theme.of(context).colorScheme.onSecondary),
+          onPressed: _listen,
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: Container(
@@ -139,18 +208,6 @@ class ChatbotState extends State<Chatbot> {
                 child: buildResponse(responseText),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                textInputAction: TextInputAction.go,
-                controller: _controller,
-                decoration: InputDecoration(
-                  enabledBorder: OutlineInputBorder(),
-                  labelText: "Enter your text",
-                  hintText: "",
-                ),
-              ),
-            )
           ],
         ),
       ),
