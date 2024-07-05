@@ -197,6 +197,7 @@ class ChatbotState extends State<Chatbot> {
                 ),
               ),
             ),
+            Text("NeXi", style: TextStyle(fontFamily: "grandstander", fontSize: 20),),
             Container(
               height: height * 0.2,
               width: width * 0.8,
